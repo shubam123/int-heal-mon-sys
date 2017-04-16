@@ -109,8 +109,21 @@ function predict(input , history)  {
 
 router.post('/', (req, res) => {
   var body = _.pick(req.body, ['s1','s2','s3','user_id']);
-  
-  history1 = ["Hypo/Hyper Glycemia" , "Anxiety Disorder"];
+  history1 = [];
+
+      History.find({"user_id":body.user_id}).then((history) => {
+       if(history.length == 0) {
+        history1 = ["Hypo/Hyper Glycemia" , "Anxiety Disorder"];
+      }
+
+      else {
+        history1 = history.history_vals; 
+      }
+    });
+
+
+
+
   input = [body.s1,body.s2,body.s3]; 
   console.log(input);                    //  a!bc
 
@@ -118,13 +131,31 @@ router.post('/', (req, res) => {
   console.log(output);
     
 
-
-
-
   //to save the sensor readings
   var sensor = new Sensor(body);
   sensor.save().then((doc) => {
-    res.send(doc);
+    //res.send(doc);
+
+    History.find({"user_id":body.user_id}).then((user) => {
+       if(user.length == 0) {
+        console.log("new user");
+        // for new user
+        var history = new History({"user_id":body.user_id,"history_vals":output});
+        history.save().then((hist) => {
+          res.send(hist);
+        }) 
+      }
+      else {
+        console.log("exst user");
+        var query = {'user_id':body.user_id};
+        History.findOneAndUpdate(query,{"user_id":body.user_id,"history_vals":output}).then((hist) => {
+          res.send(hist);
+        });
+      }
+    })
+
+
+
   }, (e) => {
     res.status(400).send(e);
   });
